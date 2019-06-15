@@ -19,7 +19,7 @@ every_round_parameters=[] #should be outside the main 'def'
 final_best_params=[] #should be outside the main 'def'
 
 
-#PLANT MODELLING STARTS
+#PLANT MODELLING STARTS (INCLUDES LINEAR REGRESSION)
 
 def main():
     
@@ -93,7 +93,7 @@ def main():
 
 
 
-#GA STARTS
+#Genetic Algorithm (GA) STARTS
 
     ## INITIALISATION   
     def create_starting_population(size, dict):    
