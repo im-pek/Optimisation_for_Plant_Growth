@@ -3,29 +3,26 @@ import matplotlib.pyplot as plt
 import random as rand
 import copy
 import math as m
-from itertools import combinations_with_replacement
 import random
-import itertools
 import boto3
 import datetime
 from decimal import *
+import decimal
 import uuid
 from decimal import Decimal
 import statsmodels.api as sm
 import pandas as pd
 import statistics as s
+from time import sleep, strftime
 
 every_round_parameters=[] #should be outside the main 'def'
-all_growth_parameters=[] #should be outside the main 'def'
-parameter_one=[] #should be outside the main 'def'
-parameter_two=[] #should be outside the main 'def'
-final_best_params=[]
-
+final_best_params=[] #should be outside the main 'def'
 
 
 #PLANT MODELLING STARTS
 
 def main():
+    
     dynamodb = boto3.resource('dynamodb')
     
     data = dynamodb.Table('LatestOptimisation')
@@ -37,24 +34,25 @@ def main():
      )
     get_item = response['Item']
     
-    latest_parameter_1_value=list(get_item.values())[4]
+    latest_parameter_1_value=float(get_item.get("RecommendedDayNight", ""))
+    initial_growth_score=int(get_item.get("CurrentGrowth", ""))
     
     powers=[]
-    
-    power_3=((list(get_item.values())[4])/24)**3
+
+    growth_score=initial_growth_score
+    powers.append(growth_score)
+                    
+    power_3=latest_parameter_1_value**3
     powers.append(power_3)
     
-    power_2=((list(get_item.values())[4])/24)**2
+    power_2=latest_parameter_1_value**2
     powers.append(power_2)
-    
-    power_1=((list(get_item.values())[4])/24)
+
+    power_1=latest_parameter_1_value
     powers.append(power_1)
     
     power_0=1
     powers.append(power_0)
-    
-    growth_score=(list(get_item.values())[2])/100*28
-    powers.append(growth_score)
     
     global every_round_parameters
     
@@ -283,14 +281,14 @@ def main():
         best_growth_score_GA=0
 
         
-        best_growth_params = ['Error']
-        plots = []
+        best_growth_params = ['0000000000'] #'000000000' SYMBOLISES ERROR. ERROR MOST LIKELY MEANS LOCAL MAXIMA, SO IT WILL SAMPLE A NEW RANDOM POINT. WE WANT GLOBAL MAXIMA.
         # create the starting population
         population, code_length, para_length = create_starting_population(population_size, dict)
         
         metadata = (code_length, para_length, dict, list)
      
         # run the iterations
+        plots=[]
         for i in range(0,number_of_iterations):
             new_population = []
             
@@ -325,31 +323,16 @@ def main():
             # add new random members
             while len(new_population) < population_size:
                 new_population += [create_new_member(para_length,code_length)]
-                
             #replace the old population with a real copy
             population = copy.deepcopy(new_population)
             plots.append(best_growth_score_GA)
-
-            global all_growth_parameters
-            global parameter_one
-            global parameter_two
             
-            all_growth_parameters.append(best_growth_params)
             
-            for indexes,parameter in enumerate(all_growth_parameters):
-                parameter_one.append(all_growth_parameters[indexes][0])
-                parameter_two.append(all_growth_parameters[indexes][1])
-            
-            best_growth_params_1=Decimal(s.mean(parameter_one))
-            best_growth_params_2=Decimal((s.mean(parameter_two))/255*100)
-            
-            all_best_growth_params=[]
-            all_best_growth_params.append(best_growth_params_1)
-            all_best_growth_params.append(best_growth_params_2)
-
         print("\n \n ************************************\n GA is Finished.")
-        print("Growth Score of {}\n With Parameters {} from {}".format(best_growth_score_GA/28*100, all_best_growth_params, list))
-               
+        print("Growth Score of {}\n With Parameters {} from {}".format(best_growth_score_GA, best_growth_params, list))
+         
+        best_growth_params_1=best_growth_params[0]
+        
         plt.plot(plots)
         plt.show()
         
@@ -357,7 +340,7 @@ def main():
         table2 = dynamodb.Table('OptimisationHistory')
         
         print(table.creation_date_time)
-        
+                
         
         d = datetime.datetime.utcnow()
         epoch = datetime.datetime(1970,1,1)
@@ -370,7 +353,7 @@ def main():
         },
         UpdateExpression='SET RecommendedDayNight = :val1',
         ExpressionAttributeValues={
-            ':val1': round(Decimal(best_growth_params_1), 2)
+            ':val1': str(best_growth_params_1)
         })
         
         table.update_item(
@@ -379,7 +362,7 @@ def main():
         },
         UpdateExpression='SET CurrentGrowth = :val1',
         ExpressionAttributeValues={
-            ':val1': round(Decimal(26/28*100), 2) #GROWTH VALUE HERE; 28 is the max. Normalise to scale of 0% - 100%.
+            ':val1': 13500 #GROWTH VALUE HERE; Normalise to scale of 0% - 100%.
         })
         
         table.update_item(
@@ -416,12 +399,14 @@ def main():
            Item={
                 'EpochTime': Decimal(t),
                 'RecipeUUID': str(uuid.uuid4()),
-                'RecommendedDayNight': round(Decimal(best_growth_params_1), 2),
+                'RecommendedDayNight': str(best_growth_params_1),
                 'RecommendedIntensity': 100, #IF CHOOSE TO OPTIMISE THIS, USE: round(best_growth_params_2, 2),
-                'CurrentGrowth': round(Decimal(26/28*100), 2) #GROWTH VALUE HERE; 28 is the max. Normalise to scale of 0% - 100%.
+                'CurrentGrowth': 'to be calibrated' #GROWTH VALUE HERE; 28 is the max. Normalise to scale of 0% - 100%.
             })
+
+        global final_best_params
         
-        final_best_params.append(round(Decimal(best_growth_params_1), 2))
+        final_best_params.append(best_growth_params_1)
         
         return True
         
@@ -471,7 +456,7 @@ def main():
 
     number_of_iterations = 100
     parameters_list = ['RecommendedDayNight','RecommendedIntensity']  #List of parameter names
-    parameters_dict = {'RecommendedDayNight':list(seq(0, 24)), 'RecommendedIntensity':list(seq(0, 255, 1))} #Dictionary containing the (min/max) #add one more comma within 'seq' for intervals    
+    parameters_dict = {'RecommendedDayNight':list(seq(0, 24, 0.25)), 'RecommendedIntensity':list(seq(0, 255, 1))} #Dictionary containing the (min/max) #add one more comma within 'seq' for intervals    
     RunGA(parameters_list, parameters_dict, number_of_iterations) 
 
 
@@ -479,23 +464,23 @@ def main():
     
     global final_best_params
     
-    print (final_best_params[-1])
-    print (round(Decimal(latest_parameter_1_value), 2))
+#    print (round(Decimal(latest_parameter_1_value), 2))
     
-#THIS PORTION AUTOMATICALLY EXITS CODE IF PREVIOUS RECOMMENDED PARAMETER EXACTLY THE SAME AS NEW RECOMMENDED PARAMETER
+#THIS PORTION AUTOMATICALLY EXITS CODE IF PREVIOUS RECOMMENDED PARAMETER EXACTLY THE SAME AS NEW RECOMMENDED PARAMETER (OPTIMAL VALUE REACHED)
     if final_best_params[-1] == round(Decimal(latest_parameter_1_value), 2):
         exit()
 
 #THIS PORTION IS FOR IMMEDIATE AUTO-RE-RUNS
     else: #CAN ADD TIMER WITHIN FOR TIMED CONSTANT AUTO RE-RUNS
+        sleep(0.000001) #FREQUENCY OF RE-OPTIMISATION, IN SECONDS
         main()
         
 # =============================================================================
 # #THIS PORTION IS FOR MANUAL RE-RUNS
-#     else:
-#         restart=input('Do you wish to start again?')
-#         if restart=='yes': #TYPE 'yes' is response window to initiate restart
-#              main()
+# #    else:
+#     restart=input('Do you wish to start again?')
+#     if restart=='yes': #TYPE 'yes' is response window to initiate restart
+#          main()
 # =============================================================================
 
 main()
