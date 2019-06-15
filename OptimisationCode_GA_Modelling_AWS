@@ -95,7 +95,7 @@ def main():
 
 #GA STARTS
 
-    ## INITIALIZATION   
+    ## INITIALISATION   
     def create_starting_population(size, dict):    
         #this just creates a population of different params combinations of a fixed size.
         #here we unpack the dictionary to see how long our gene needs to be, para_length is a list of the lengths of the parameter lists
@@ -281,7 +281,7 @@ def main():
         best_growth_score_GA=0
 
         
-        best_growth_params = ['0000000000'] #'000000000' SYMBOLISES ERROR. ERROR MOST LIKELY MEANS LOCAL MAXIMA, SO IT WILL SAMPLE A NEW RANDOM POINT. WE WANT GLOBAL MAXIMA.
+        best_growth_params = ['0000000000'] #'000000000' SYMBOLISES 'OUT OF PRE-STIPULATED RANGE'; A NEW RANDOM POINT WILL BE SAMPLED.
         # create the starting population
         population, code_length, para_length = create_starting_population(population_size, dict)
         
