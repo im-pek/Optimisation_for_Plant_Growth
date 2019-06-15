@@ -11,6 +11,16 @@ import datetime
 from decimal import *
 import uuid
 from decimal import Decimal
+import statsmodels.api as sm
+import pandas as pd
+import statistics as s
+
+every_round_parameters=[] #should be outside the main 'def'
+all_growth_parameters=[] #should be outside the main 'def'
+parameter_one=[] #should be outside the main 'def'
+parameter_two=[] #should be outside the main 'def'
+final_best_params=[]
+
 
 
 #PLANT MODELLING STARTS
@@ -23,120 +33,64 @@ def main():
     response = data.get_item(
          Key={
              'ID': 1
-         }
+     }   
      )
     get_item = response['Item']
     
-    best_growth_params=[]
-    best_growth_params.append((list(get_item.values())[4])/24)
-    best_growth_params.append((list(get_item.values())[1])/100)
-
-    best_growth_score=28 #list(get_item.values())[2] #GROWTH VALUE HERE; MAXIMUM 28 (considering max. coefficient is 9)
-
-    #print (best_growth_params)
-
-    #print (best_growth_score)
+    latest_parameter_1_value=list(get_item.values())[4]
     
-    a=0
-    b=0
-    c=0
-    d=0
-    x=0
+    powers=[]
     
-    models=[]
+    power_3=((list(get_item.values())[4])/24)**3
+    powers.append(power_3)
     
-    coefficient_values_ranges=list(range(10)) #CONTROL range of coefficient values (the larger, the more precise, the higher procecessing time & memory required)
+    power_2=((list(get_item.values())[4])/24)**2
+    powers.append(power_2)
     
-    # Get all combinations of 1-9 (9 choose 4, 4 due to 4 coefficients for our model)
-    comb = combinations_with_replacement(coefficient_values_ranges, 4) #last number can be changed; depends on number of coefficients for model
+    power_1=((list(get_item.values())[4])/24)
+    powers.append(power_1)
     
-    # obtain combinations
-    permutation=[]
+    power_0=1
+    powers.append(power_0)
     
-    for k in list(comb):
-        permutation.append(k)
+    growth_score=(list(get_item.values())[2])/100*28
+    powers.append(growth_score)
     
-    empty=[]
+    global every_round_parameters
     
-    # obtain permutations of combinations
-    
-    for item in permutation:
-        permute=set(itertools.permutations(item))
-        empty.append(permute)
-    
-    flat=itertools.chain.from_iterable(empty)
-    permutations_list=list(flat)
+    every_round_parameters.append(powers)
         
-    j=0
+    print (every_round_parameters)
     
-    while j<len(permutations_list): #permutation 1, permutation 2, ..., permutation n
-        i=0        
-        number_of_params=len(best_growth_params)
-        while number_of_params>0: #parameter 1, parameter 2
-            a=permutations_list[j][0]
-            b=permutations_list[j][1]
-            c=permutations_list[j][2]
-            d=permutations_list[j][3]
-            x=best_growth_params[i]
-            model=a+b*x+c*x**2+d*x**3
-            models.append(model)
-            i += 1
-            number_of_params -= 1
-        j += 1
     
-    #print (models)
+    df1=pd.DataFrame(every_round_parameters,columns=['g','x3','x2','x1','const'])
+    print (df1)
     
-    overall_many_parameters=[]
     
-    param=0
-    while param<len(best_growth_params):
-        overall_many_parameters.append(models[param::len(best_growth_params)])
-        param += 1
+    reg1 = sm.OLS(endog=df1['g'].astype(float), exog=df1[['x3','x2','x1','const']].astype(float), missing='drop')
+    type(reg1)
     
-    #print (overall_many_parameters[0])
+    results = reg1.fit()
+    type(results)
     
-    for idx,thing in enumerate(overall_many_parameters[0]):
-        squared_loss_diff1=(best_growth_score-overall_many_parameters[0][idx])**2
-        overall_many_parameters[0][idx]=squared_loss_diff1
-        
-    for idx2,thing2 in enumerate(overall_many_parameters[1]):
-        squared_loss_diff2=(best_growth_score-overall_many_parameters[1][idx2])**2
-        overall_many_parameters[1][idx2]=squared_loss_diff2
+    print(results.summary())
     
-    empty3=[]
-
-    empty4=[]
-    
-    for ixx,thingy in enumerate(overall_many_parameters[0]):
-        if thingy == min(overall_many_parameters[0]):
-            empty3.append(ixx)
-    
-    for ixx2,thingy2 in enumerate(overall_many_parameters[1]):
-        if thingy2 == min(overall_many_parameters[1]):
-            empty4.append(ixx2)
- 
-    # EACH OF THIS ABOVE FOR LOOP IS FOR ONE PARAMETER. ADD A NEW FOR LOOP AS A NEW PARAMETER IS ADDED.
-    
-    #print (empty3)
-    #print (empty4)
-    
-    index_min1=random.choice(empty3)
-    index_min2=random.choice(empty4)
-    
-    #SAME STORY, ADD ONE MORE INDEX_MIN AS EACH NEW PARAMETER IS ADDED.
-    
+    coefficients=[]
+    coefficients.append(results.params[3])
+    coefficients.append(results.params[2])
+    coefficients.append(results.params[1])
+    coefficients.append(results.params[0])
+      
     all_coefficients=[]
-    all_coefficients.append(permutations_list[index_min1])
-    all_coefficients.append(permutations_list[index_min2])
-    #print (all_coefficients)
-    
-    #SAME STORY, ADD ONE MORE ALL_COEFFICIENTS AS EACH NEW PARAMETER IS ADDED.
+    all_coefficients.append(coefficients)
     
     print ('Coefficients (a,b,c,d) for 1st parameter, x, in a+bx+cx^2+dx^3 format: ')
-    print (permutations_list[index_min1])
-    print ('Coefficients (a,b,c,d) for 2nd parameter, y, in a+by+cy^2+dy^3 format: ')
-    print (permutations_list[index_min2])
+    print (coefficients)
 
+# =============================================================================
+#     print ('Coefficients (a,b,c,d) for 2nd parameter, y, in a+by+cy^2+dy^3 format: ')
+#     print (permutations_list[index_min2])
+# =============================================================================
 
 
 
@@ -375,23 +329,27 @@ def main():
             #replace the old population with a real copy
             population = copy.deepcopy(new_population)
             plots.append(best_growth_score_GA)
+
+            global all_growth_parameters
+            global parameter_one
+            global parameter_two
             
-            normalised_best_growth_params=[]
-            decimal_growth_para_1=Decimal(best_growth_params[0])
-#            decimal_growth_para_2=Decimal(best_growth_params[1]) #UNCOMMENT IF EXPERIMENTING ON PARAMETER_2
-            decimal_growth_para_2=255 #COMMENT IT OUT (I.E. DON'T RUN THIS LINE) IF START EXPERIMENTING ON PARAMETER 2
-            normalised_best_growth_params.append(decimal_growth_para_1)
-            normalised_best_growth_params.append(decimal_growth_para_2/255*100)            
+            all_growth_parameters.append(best_growth_params)
+            
+            for indexes,parameter in enumerate(all_growth_parameters):
+                parameter_one.append(all_growth_parameters[indexes][0])
+                parameter_two.append(all_growth_parameters[indexes][1])
+            
+            best_growth_params_1=Decimal(s.mean(parameter_one))
+            best_growth_params_2=Decimal((s.mean(parameter_two))/255*100)
+            
+            all_best_growth_params=[]
+            all_best_growth_params.append(best_growth_params_1)
+            all_best_growth_params.append(best_growth_params_2)
 
         print("\n \n ************************************\n GA is Finished.")
-        print("Growth Score of {}\n With Parameters {} from {}".format(best_growth_score_GA, normalised_best_growth_params, list))
-       
-        decimal_growth_para_1=Decimal(best_growth_params[0])
-        decimal_growth_para_2=Decimal(best_growth_params[1])
-        parameter_1_rounded_decimal=round(decimal_growth_para_1,2) #last number is the number of decimal places
-#        parameter_2_rounded_decimal=round(decimal_growth_para_2,2) #UNCOMMENT IF EXPERIMENTING ON PARAMETER_2 (last number is the number of decimal places)
-        parameter_2_rounded_decimal=255 #COMMENT IT OUT (I.E. DON'T RUN THIS LINE) IF START EXPERIMENTING ON PARAMETER 2
-        
+        print("Growth Score of {}\n With Parameters {} from {}".format(best_growth_score_GA/28*100, all_best_growth_params, list))
+               
         plt.plot(plots)
         plt.show()
         
@@ -412,7 +370,7 @@ def main():
         },
         UpdateExpression='SET RecommendedDayNight = :val1',
         ExpressionAttributeValues={
-            ':val1': parameter_1_rounded_decimal
+            ':val1': round(Decimal(best_growth_params_1), 2)
         })
         
         table.update_item(
@@ -421,7 +379,7 @@ def main():
         },
         UpdateExpression='SET CurrentGrowth = :val1',
         ExpressionAttributeValues={
-            ':val1': Decimal(28) #GROWTH VALUE HERE; 28 is the max. Normalise to scale of 0% - 100%.
+            ':val1': round(Decimal(26/28*100), 2) #GROWTH VALUE HERE; 28 is the max. Normalise to scale of 0% - 100%.
         })
         
         table.update_item(
@@ -430,7 +388,7 @@ def main():
         },
         UpdateExpression='SET RecommendedIntensity = :val1',
         ExpressionAttributeValues={
-            ':val1': Decimal(parameter_2_rounded_decimal/255*100)
+            ':val1': 100 #IF CHOOSE TO OPTIMISE THIS, USE: round(best_growth_params_2, 2),
         })    
         
         table.update_item(
@@ -458,15 +416,13 @@ def main():
            Item={
                 'EpochTime': Decimal(t),
                 'RecipeUUID': str(uuid.uuid4()),
-                'RecommendedDayNight': parameter_1_rounded_decimal,
-                'RecommendedIntensity': Decimal(parameter_2_rounded_decimal/255*100),
-                'CurrentGrowth': 'to be calibrated', #GROWTH VALUE HERE; 28 is the max. Normalise to scale of 0% - 100%.
+                'RecommendedDayNight': round(Decimal(best_growth_params_1), 2),
+                'RecommendedIntensity': 100, #IF CHOOSE TO OPTIMISE THIS, USE: round(best_growth_params_2, 2),
+                'CurrentGrowth': round(Decimal(26/28*100), 2) #GROWTH VALUE HERE; 28 is the max. Normalise to scale of 0% - 100%.
             })
         
+        final_best_params.append(round(Decimal(best_growth_params_1), 2))
         
-        if parameter_2_rounded_decimal == 255: #THIS LINE HELPS AUTO-RE-RUN (CAN POTENTIALLY SET TIMER), COMMENT IT OUT IF DO NOT WANT AUTO-RE-RUN
-            main() #THIS LINE HELPS AUTO-RE-RUN (CAN POTENTIALLY SET TIMER), COMMENT IT OUT IF DO NOT WANT AUTO-RE-RUN
-            
         return True
         
         
@@ -512,19 +468,34 @@ def main():
         else:
             return([])
     
-        
+
     number_of_iterations = 100
     parameters_list = ['RecommendedDayNight','RecommendedIntensity']  #List of parameter names
-    parameters_dict = {'RecommendedDayNight':list(seq(0, 24, 0.25)), 'RecommendedIntensity':list(seq(0, 255, 1))} #Dictionary containing the (min/max)
-    
+    parameters_dict = {'RecommendedDayNight':list(seq(0, 24)), 'RecommendedIntensity':list(seq(0, 255, 1))} #Dictionary containing the (min/max) #add one more comma within 'seq' for intervals    
     RunGA(parameters_list, parameters_dict, number_of_iterations) 
 
 
-        
-    restart=input('Do you wish to start again?')
-    if restart=='yes':
-        main()
-    else:
+    print (every_round_parameters)
+    
+    global final_best_params
+    
+    print (final_best_params[-1])
+    print (round(Decimal(latest_parameter_1_value), 2))
+    
+#THIS PORTION AUTOMATICALLY EXITS CODE IF PREVIOUS RECOMMENDED PARAMETER EXACTLY THE SAME AS NEW RECOMMENDED PARAMETER
+    if final_best_params[-1] == round(Decimal(latest_parameter_1_value), 2):
         exit()
+
+#THIS PORTION IS FOR IMMEDIATE AUTO-RE-RUNS
+    else: #CAN ADD TIMER WITHIN FOR TIMED CONSTANT AUTO RE-RUNS
+        main()
         
+# =============================================================================
+# #THIS PORTION IS FOR MANUAL RE-RUNS
+#     else:
+#         restart=input('Do you wish to start again?')
+#         if restart=='yes': #TYPE 'yes' is response window to initiate restart
+#              main()
+# =============================================================================
+
 main()
