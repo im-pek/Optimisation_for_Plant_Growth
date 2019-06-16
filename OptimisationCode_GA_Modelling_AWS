@@ -88,7 +88,7 @@ def main():
 
 # =============================================================================
 #     print ('Coefficients (a,b,c,d) for 2nd parameter, y, in a+by+cy^2+dy^3 format: ')
-#     print (permutations_list[index_min2])
+#     print ()
 # =============================================================================
 
 
