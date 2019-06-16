@@ -1,5 +1,5 @@
 # Optimisation for Maximum Plant Growth
-Achieve optimal plant growth through the derivation of best growth recipe (i.e. input growth parameters) using Genetic Algorithm and Plant Modelling methods. Data sending and retrieval link up with AWS' DynamoDB, in which the latter is a centralised system for IOT integration between controls and sensors for an integrated smart plant growth system.
+Achieve optimal plant growth through derivation of best growth recipe (i.e. input growth parameters) using Genetic Algorithm and Modelling (e.g. Linear Regression) methods. Data sends to & retrieves from AWS' DynamoDB; the latter is a centralised system for IoT integration between controls & sensors, for an integrated smart plant growth system.
 
 #GeneticAlgorithm #Optimisation #PlantGrowthModelling
 
