@@ -31,7 +31,7 @@ def main():
     response = data.get_item(
          Key={
              'ID': 1
-     }   
+        }   
      )
     get_item = response['Item']
     
@@ -40,7 +40,7 @@ def main():
     
     powers=[]
 
-    growth_score=initial_growth_score
+    growth_score=m.log(initial_growth_score,10)
     powers.append(growth_score)
                     
     power_3=latest_parameter_1_value**3
@@ -62,11 +62,11 @@ def main():
     print (every_round_parameters)
     
     
-    df1=pd.DataFrame(every_round_parameters,columns=['g','x3','x2','x1','const'])
+    df1=pd.DataFrame(every_round_parameters,columns=['G','X3','X2','X1','Constant'])
     print (df1)
     
     
-    reg1 = sm.OLS(endog=df1['g'].astype(float), exog=df1[['x3','x2','x1','const']].astype(float), missing='drop')
+    reg1 = sm.OLS(endog=df1['G'].astype(float), exog=df1[['X3','X2','X1','Constant']].astype(float), missing='drop')
     type(reg1)
     
     results = reg1.fit()
@@ -79,16 +79,13 @@ def main():
     coefficients.append(results.params[2])
     coefficients.append(results.params[1])
     coefficients.append(results.params[0])
-      
-    all_coefficients=[]
-    all_coefficients.append(coefficients)
-    
+          
     print ('Coefficients (a,b,c,d) for 1st parameter, x, in a+bx+cx^2+dx^3 format: ')
     print (coefficients)
 
 # =============================================================================
 #     print ('Coefficients (a,b,c,d) for 2nd parameter, y, in a+by+cy^2+dy^3 format: ')
-#     print ()
+#     print (permutations_list[index_min2])
 # =============================================================================
 
 
@@ -382,6 +379,7 @@ def main():
         ExpressionAttributeValues={
             ':val1': Decimal(t)
         })    
+            
     
         table.update_item(
          Key={
@@ -413,14 +411,13 @@ def main():
         
     
     #######################   BELOW HERE SITS GROWTH MODEL, WHICH CAN BE EDITED   ####################### 
-    #coefficients=[(1,2,7,9),(3,2,2,7)]
-    scored=[]
+    #coefficients=(1,2,7,9)
 
     def model(member, code_length, values):
         #takes in a list of values for parameters and returns the score (expected growth score)
         
         #Change this number to reflect no. of parameters the model requires
-        expected_parameters = 2
+        expected_parameters = 1
         score = 0
         
         if(len(values) < expected_parameters):
@@ -432,15 +429,20 @@ def main():
            
         else:
             #Model changes here
-            a_number=0
-            while a_number<=len(all_coefficients):
-                for ix,coefficient in enumerate(all_coefficients):
-                    for idx,alphabet in enumerate(values):
-                        scores = all_coefficients[ix][0] + all_coefficients[ix][1]*values[idx] + all_coefficients[ix][2]*values[idx]**2 + all_coefficients[ix][3]*values[idx]**3
-                        scored.append(scores)
-                a_number += 1
-        score=sum(scored)
+#            print ('ALL COEFFICIENTS ARE', coefficients)
+            score = coefficients[0] + coefficients[1]*values[0] + coefficients[2]*values[0]**2 + coefficients[3]*values[0]**3 
         return score
+       
+# =============================================================================
+#             while a_number<=len(all_coefficients):
+#                 for ix,coefficient in enumerate(all_coefficients):
+#                     for idx,alphabet in enumerate(values):
+#                         scores = all_coefficients[ix][0] + all_coefficients[ix][1]*values[idx] + all_coefficients[ix][2]*values[idx]**2 + all_coefficients[ix][3]*values[idx]**3
+#                         scored.append(scores)
+#                 a_number += 1
+#         score=sum(scored)
+#         return score
+# =============================================================================
 
     ##########################################################################
     
@@ -455,9 +457,9 @@ def main():
     
 
     number_of_iterations = 100
-    parameters_list = ['RecommendedDayNight','RecommendedIntensity']  #List of parameter names
-    parameters_dict = {'RecommendedDayNight':list(seq(0, 24, 0.25)), 'RecommendedIntensity':list(seq(0, 255, 1))} #Dictionary containing the (min/max) #add one more comma within 'seq' for intervals    
-    RunGA(parameters_list, parameters_dict, number_of_iterations) 
+    parameters_list = ['RecommendedDayNight']  #List of parameter names
+    parameters_dict = {'RecommendedDayNight':list(seq(0.25, 23.75, 0.25))} #Dictionary containing the (min/max) #add one more comma within 'seq' for intervals    
+    RunGA(parameters_list, parameters_dict, number_of_iterations)
 
 
     print (every_round_parameters)
@@ -466,21 +468,21 @@ def main():
     
 #    print (round(Decimal(latest_parameter_1_value), 2))
     
-#THIS PORTION AUTOMATICALLY EXITS CODE IF PREVIOUS RECOMMENDED PARAMETER EXACTLY THE SAME AS NEW RECOMMENDED PARAMETER (OPTIMAL VALUE REACHED)
-    if final_best_params[-1] == round(Decimal(latest_parameter_1_value), 2):
-        exit()
-
-#THIS PORTION IS FOR IMMEDIATE AUTO-RE-RUNS
-    else: #CAN ADD TIMER WITHIN FOR TIMED CONSTANT AUTO RE-RUNS
-        sleep(0.000001) #FREQUENCY OF RE-OPTIMISATION, IN SECONDS
-        main()
+# =============================================================================
+# #THIS PORTION AUTOMATICALLY EXITS CODE IF PREVIOUS RECOMMENDED PARAMETER EXACTLY THE SAME AS NEW RECOMMENDED PARAMETER (OPTIMAL VALUE REACHED)
+#     if final_best_params[-1] == round(Decimal(latest_parameter_1_value), 2):
+#         exit()
+# 
+# #THIS PORTION IS FOR IMMEDIATE AUTO-RE-RUNS
+#     else: #CAN ADD TIMER WITHIN FOR TIMED CONSTANT AUTO RE-RUNS
+#         sleep(0.000001) #FREQUENCY OF RE-OPTIMISATION, IN SECONDS
+#         main()
+# =============================================================================
         
-# =============================================================================
-# #THIS PORTION IS FOR MANUAL RE-RUNS
-# #    else:
-#     restart=input('Do you wish to start again?')
-#     if restart=='yes': #TYPE 'yes' is response window to initiate restart
-#          main()
-# =============================================================================
+#THIS PORTION IS FOR MANUAL RE-RUNS
+#    else:
+    restart=input('Do you wish to start again?')
+    if restart=='yes': #TYPE 'yes' is response window to initiate restart
+         main()
 
 main()
